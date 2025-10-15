@@ -32,5 +32,6 @@ from .client import (
     create_async_client
 )
 
+
 __version__ = "1.0.0"
 __author__ = "Anthony Santos"
