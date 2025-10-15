@@ -1,0 +1,34 @@
+# Ambiente virtual
+.venv/
+venv/
+env/
+
+# Cache e arquivos temporários do Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Diretórios de build e distribuição
+build/
+dist/
+*.egg-info/
+*.egg
+.eggs/
+
+# Configurações e arquivos locais
+.env
+*.log
+
+# IDEs e editores
+.vscode/
+.idea/
+*.iml
+
+# Arquivos de sistema
+.DS_Store
+Thumbs.db
+
+# Outros arquivos que não precisam ir para o repositório
+*.bak
+*.tmp

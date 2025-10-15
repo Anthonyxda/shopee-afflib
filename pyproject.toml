@@ -1,0 +1,18 @@
+[project]
+name = "shopee-afflib"
+version = "1.0.0"
+description = "Biblioteca para integração com a API de Afiliados da Shopee (síncrona e assíncrona)."
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    { name="Anthony Santos", email="anthonyxda@live.com" }
+]
+dependencies = [
+    "requests>=2.0",
+    "aiohttp>=3.8"
+]
+
+[project.urls]
+Homepage = "https://github.com/anthonyxda/shopee-afflib"
+Source = "https://github.com/anthonyxda/shopee-afflib"
