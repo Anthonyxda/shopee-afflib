@@ -19,7 +19,9 @@ result = cliente.get_product_offer(url="https://shopee.com.br/...")
 print(result)
 # 💽 Se quiser salvar a imagem do produto em memória ou localmente:
 cliente.download_product_image(result)
-
+# Para obter o link curto de afiliado de algum produto
+link_curto = cliente.get_short_url("https://shopee.com.br/...")
+print(link_curto)
 ```
 
 ## 🧩 Uso assincrono básico
