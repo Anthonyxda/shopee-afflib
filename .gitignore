@@ -32,3 +32,6 @@ Thumbs.db
 # Outros arquivos que não precisam ir para o repositório
 *.bak
 *.tmp
+
+# Teste
+teste.py
