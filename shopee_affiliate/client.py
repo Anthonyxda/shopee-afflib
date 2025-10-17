@@ -63,6 +63,7 @@ class ShopeeAffiliateSync(ShopeeAffiliateBase):
     def get_product_offer(
         self,
         url: str = None,
+        by_shop: bool = False,
         shop_id: Union[int, str, None] = None,
         item_id: Union[int, str, None] = None,
         limit: int = 5,
@@ -73,21 +74,14 @@ class ShopeeAffiliateSync(ShopeeAffiliateBase):
         
         Args:
             url: URL do produto Shopee (aceita link curto ou completo).
+            by_shop: Pesquise somente produtos da loja a partir da url.
             shop_id: ID da loja (int ou string).
             item_id: ID do produto (int ou string).
             limit: Total de itens por consulta.
-            scroll_id: ID da paginação (opcional).
+            scroll_id: ID da paginação (opcional), saiba mais em https://affiliate.shopee.com.br/open_api/home.
             
         Returns:
             Dict com informações do produto.
-
-        Usage::
-
-      >>> import requests
-      >>> req = requests.request('GET', 'https://httpbin.org/get')
-      >>> req
-      <Response [200]>
-    
         """
         # 🔹 Se uma URL for passada, tenta extrair shop_id e item_id dela
         if url:
@@ -127,6 +121,9 @@ class ShopeeAffiliateSync(ShopeeAffiliateBase):
         shop_id_str = f"shopId: {int(shop_id)}" if shop_id else ""
         item_id_str = f", itemId: {int(item_id)}" if item_id else ""
         limit_str = f", limit: {limit}" if not item_id else ""  # só aplica 'limit' em listagens
+        if by_shop:
+            item_id_str = ""
+            limit_str = f", limit: {limit}"
         scroll_str = f', scrollId: "{scroll_id}"' if scroll_id else ""
 
         # 🔹 Campos do GraphQL centralizados (sem repetição)
@@ -310,21 +307,22 @@ class ShopeeAffiliateAsync(ShopeeAffiliateBase):
     async def get_product_offer(
         self,
         url: str = None,
+        by_shop: bool = False,
         shop_id: Union[int, str, None] = None,
         item_id: Union[int, str, None] = None,
         limit: int = 5,
-        scroll_id: str | None = None,
-        pprint: bool = False
+        scroll_id: str | None = None
         ) -> Dict[str, Any]:
         """
         Busca informações de oferta de produto específico.
         
         Args:
             url: URL do produto Shopee (aceita link curto ou completo).
+            by_shop: Pesquise somente produtos da loja a partir da url
             shop_id: ID da loja (int ou string).
             item_id: ID do produto (int ou string).
             limit: Total de itens por consulta.
-            scroll_id: ID da paginação (opcional).
+            scroll_id: ID da paginação (opcional), saiba mais em https://affiliate.shopee.com.br/open_api/home.
             pprint: Se for True, retorna a resposta em formato JSON formatado.
             
         Returns:
@@ -365,6 +363,9 @@ class ShopeeAffiliateAsync(ShopeeAffiliateBase):
         shop_id_str = f"shopId: {int(shop_id)}" if shop_id else ""
         item_id_str = f", itemId: {int(item_id)}" if item_id else ""
         limit_str = f", limit: {limit}" if not item_id else ""  # só aplica 'limit' em listagens
+        if by_shop:
+            item_id_str = ""
+            limit_str = f", limit: {limit}"
         scroll_str = f', scrollId: "{scroll_id}"' if scroll_id else ""
 
         # 🔹 Campos do GraphQL centralizados
@@ -402,12 +403,6 @@ class ShopeeAffiliateAsync(ShopeeAffiliateBase):
             }}
         }}
         """
-
-        if pprint:
-            # 🔹 Chama a função de consulta GraphQL 
-            resultado = await self.graphql_query(query)
-            return json.dumps(resultado, indent=2, ensure_ascii=False)
-
         # 🔹 Chama a função de consulta GraphQL
         return await self.graphql_query(query)
         
