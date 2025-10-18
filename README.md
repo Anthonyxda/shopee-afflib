@@ -84,8 +84,9 @@ new_image.show()
 - 🧠 Versões síncrona e assíncrona
 
 ## 🔥 Novidades
+v.1.0.11 - Pequenas correções no código
 
-v 1.0.10
+v.1.0.10
 - Adicionado mais argumentos para busca de seletiva de itens
 - Vaárias melhorias no código.
 
@@ -96,12 +97,8 @@ v.1.0.5
 v.1.0.0
 - Versão inicial
 
-## sortType
-🔹 Valores disponíveis
-Valor	Constante	Significado
-1	SHOP_LIST_SORT_TYPE_LATEST_DESC	Ordena pelo último update dos produtos/lojas (mais recentes primeiro).
-2	SHOP_LIST_SORT_TYPE_HIGHEST_COMMISSION_DESC	Ordena pela maior comissão (do mais alto para o mais baixo).
-3	SHOP_LIST_SORT_TYPE_POPULAR_SHOP_DESC	Ordena pela popularidade da loja (mais popular primeiro).
+## Para ver as categorias dos itens 
+👉 https://seller.shopee.com.br/edu/category-guide
 
 ## ✨ Créditos
 Desenvolvido por **Anthony Santos**

@@ -80,7 +80,7 @@ class ShopeeAffiliateSync(ShopeeAffiliateBase):
             if match:
                 return match.groups()
 
-            raise ValueError(f"Formato de URL não suportado: {url}")
+            raise ValueError(f"Está ULR é muito antiga ou o formato não é suportado: {url}")
 
         except requests.RequestException as e:
             raise RuntimeError(f"Erro ao processar URL: {e}")
@@ -133,27 +133,29 @@ class ShopeeAffiliateSync(ShopeeAffiliateBase):
         # Extração de IDs da URL se fornecida
         if url:
             shop_id, item_id = self._extract_ids_from_url(url)
+            shopId = shop_id
+            itemId = item_id
 
         if url and (shopId or itemId):
             raise ValueError("Não é possível passar uma url com shopId ou itemId)")
             
         # Validação de parâmetros obrigatórios
-        if item_id and not shop_id:
+        if itemId and not shopId:
             raise ValueError("shop_id é obrigatório para consultas com item_id")
         
-        if byShop and not shop_id:
+        if byShop and not shopId:
             raise ValueError("shop_id é obrigatório quando by_shop=True")
 
         # Construção dos argumentos da query
         args = []
 
-        if shop_id:
-            args.append(f"shopId: {int(shop_id)}")
+        if shopId:
+            args.append(f"shopId: {int(shopId)}")
         
         # Lógica para item_id vs listagem
-        if item_id and not byShop:
+        if itemId and not byShop:
             # Consulta de produto específico
-            args.append(f"itemId: {int(item_id)}")
+            args.append(f"itemId: {int(itemId)}")
         else:
             # Listagem (por loja ou geral) - permite paginação e limite
             if limit:
@@ -165,7 +167,7 @@ class ShopeeAffiliateSync(ShopeeAffiliateBase):
 
         # Parâmetros de busca/filtro (apenas para listagens)
         if keyword and not byShop:  # Não permite keyword com by_shop
-            args.append(f"keyword: '{keyword}'")
+            args.append(f'keyword: "{keyword}"')
         
         if productCatId:
             args.append(f"productCatId: {productCatId}")
@@ -385,7 +387,7 @@ class ShopeeAffiliateAsync(ShopeeAffiliateBase):
             if match:
                 return match.groups()
 
-            raise ValueError(f"Formato de URL não suportado: {url}")
+            raise ValueError(f"Está ULR é muito antiga ou o formato não é suportado: {url}")
 
         except aiohttp.ClientError as e:
             raise RuntimeError(f"Erro ao processar URL: {e}")
@@ -435,34 +437,32 @@ class ShopeeAffiliateAsync(ShopeeAffiliateBase):
         if sortType and sortType not in (1, 2, 3):
             raise ValueError("sortType deve ser 1, 2 ou 3")
 
-        # Inicializa variáveis
-        shop_id = shopId
-        item_id = itemId
-
         # Extração de IDs da URL se fornecida
         if url:
             shop_id, item_id = await self._extract_ids_from_url_async(url)
+            shopId = shop_id
+            itemId = item_id
 
         if url and (shopId or itemId):
             raise ValueError("Não é possível passar uma url com shopId ou itemId")
                 
         # Validação de parâmetros obrigatórios
-        if item_id and not shop_id:
+        if itemId and not shopId:
             raise ValueError("shop_id é obrigatório para consultas com item_id")
         
-        if byShop and not shop_id:
+        if byShop and not shopId:
             raise ValueError("shop_id é obrigatório quando byShop=True")
 
         # Construção dos argumentos da query
         args = []
 
-        if shop_id:
-            args.append(f"shopId: {int(shop_id)}")
+        if shopId:
+            args.append(f"shopId: {int(shopId)}")
         
         # Lógica para item_id vs listagem
-        if item_id and not byShop:
+        if itemId and not byShop:
             # Consulta de produto específico
-            args.append(f"itemId: {int(item_id)}")
+            args.append(f"itemId: {int(itemId)}")
         else:
             # Listagem (por loja ou geral) - permite paginação e limite
             if limit:
@@ -474,7 +474,7 @@ class ShopeeAffiliateAsync(ShopeeAffiliateBase):
 
         # Parâmetros de busca/filtro (apenas para listagens)
         if keyword and not byShop:  # Não permite keyword com byShop
-            args.append(f"keyword: '{keyword}'")
+            args.append(f'keyword: "{keyword}"')
         
         if productCatId:
             args.append(f"productCatId: {productCatId}")
