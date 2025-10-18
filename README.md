@@ -85,14 +85,23 @@ new_image.show()
 
 ## 🔥 Novidades
 
+v 1.0.10
+- Adicionado mais argumentos para busca de seletiva de itens
+- Vaárias melhorias no código.
+
 v.1.0.5
-- Adiconado a possibidade de pesquisar produtos de uma loja pela url
+- Adiconado a possibidade de pesquisar produtos de uma loja pela URL
 - Pequenas correções de bugs
 
 v.1.0.0
 - Versão inicial
 
-
+## sortType
+🔹 Valores disponíveis
+Valor	Constante	Significado
+1	SHOP_LIST_SORT_TYPE_LATEST_DESC	Ordena pelo último update dos produtos/lojas (mais recentes primeiro).
+2	SHOP_LIST_SORT_TYPE_HIGHEST_COMMISSION_DESC	Ordena pela maior comissão (do mais alto para o mais baixo).
+3	SHOP_LIST_SORT_TYPE_POPULAR_SHOP_DESC	Ordena pela popularidade da loja (mais popular primeiro).
 
 ## ✨ Créditos
 Desenvolvido por **Anthony Santos**

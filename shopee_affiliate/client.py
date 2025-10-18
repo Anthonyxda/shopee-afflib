@@ -39,7 +39,7 @@ class ShopeeAffiliateSync(ShopeeAffiliateBase):
     
     def graphql_query(self, query: str) -> Dict[str, Any]:
         """
-        Executa uma consulta GraphQL de forma síncrona
+        Executa uma consulta GraphQL de forma síncrona.
         
         Args:
             query: String com a query GraphQL
@@ -48,93 +48,147 @@ class ShopeeAffiliateSync(ShopeeAffiliateBase):
             Dict com a resposta da API
         """
         timestamp = int(time.time())
-        payload_str = json.dumps({"query": query}, separators=(",", ":"))
+        payload = {"query": query}
+        payload_str = json.dumps(payload, separators=(",", ":"))
         headers = self._build_headers(timestamp, payload_str)
         
         response = requests.post(
             self.base_url,
             headers=headers,
-            data=payload_str
+            data=payload_str,
+            timeout=30  # Adicionar timeout é uma boa prática
         )
-        
         response.raise_for_status()
         return response.json()
-    
+
+    def _extract_ids_from_url(self, url: str) -> tuple[str, str]:
+        """Extrai shop_id e item_id de URLs da Shopee."""
+        try:
+            if "s.shopee.com.br" in url:  # Link curto
+                response = requests.get(url, allow_redirects=True, timeout=10)
+                final_url = response.url
+            else:
+                final_url = url
+
+            # Padrão novo: /product/<shop_id>/<product_id>
+            match = re.search(r'/product/(\d+)/(\d+)', str(final_url))
+            if match:
+                return match.groups()
+
+            # Padrão antigo: -i.<shop_id>.<product_id>
+            match = re.search(r'-i\.(\d+)\.(\d+)', str(final_url))
+            if match:
+                return match.groups()
+
+            raise ValueError(f"Formato de URL não suportado: {url}")
+
+        except requests.RequestException as e:
+            raise RuntimeError(f"Erro ao processar URL: {e}")
+
     def get_product_offer(
         self,
         url: str = None,
-        shop_id: Union[int, str, None] = None,
-        item_id: Union[int, str, None] = None,
+        byShop: bool = False,
+        shopId: Union[int, str, None] = None,
+        itemId: Union[int, str, None] = None,
+        keyword: str | None = None,
+        shopType: str | None = None,
+        page: int | None = None,
         limit: int = 5,
-        scroll_id: str | None = None,
-        ) -> Dict[str, Any]:
+        sortType: str | None = None,
+        productCatId: int | None = None,
+        isAMSOffer: bool | None = None,
+        isKeySeller: bool | None = None,
+        scrollId: str | None = None
+    ) -> Dict[str, Any]:
         """
         Busca informações de oferta de produto específico.
         
         Args:
-            url: URL do produto Shopee (aceita link curto ou completo).
-            shop_id: ID da loja (int ou string).
-            item_id: ID do produto (int ou string).
-            limit: Total de itens por consulta.
-            scroll_id: ID da paginação (opcional).
-            
+            url: URL do produto Shopee (aceita link curto ou completo)
+            by_shop: Filtrar apenas por loja
+            shopId: ID da loja
+            itemId: ID do produto
+            keyword: Termo de busca
+            shopType: Tipo de loja
+            page: Número da página
+            limit: Itens por página (default: 5)
+            sortType: Tipo de ordenação (1, 2, 3)
+            productCatId: ID da categoria
+            isAMSOffer: Filtro para ofertas AMS
+            isKeySeller: Filtro para vendedores chave
+            scrollId: ID para paginação
+
         Returns:
-            Dict com informações do produto.
+            Dict com informações do produto
 
-        Usage::
-
-      >>> import requests
-      >>> req = requests.request('GET', 'https://httpbin.org/get')
-      >>> req
-      <Response [200]>
-    
+        Raises:
+            ValueError: Quando há parâmetros inválidos ou ausentes
+            RuntimeError: Erro ao processar URL
         """
-        # 🔹 Se uma URL for passada, tenta extrair shop_id e item_id dela
+        # Validações iniciais
+        if sortType and sortType not in (1, 2, 3):
+            raise ValueError("sortType deve ser 1, 2 ou 3")
+
+        # Extração de IDs da URL se fornecida
         if url:
-            try:
-                # Se for link curto, segue redirecionamento
-                if "s.shopee.com.br" in url:
-                    try:
-                        response = requests.get(url, allow_redirects=True, timeout=5)
-                        final_url = str(response.url)  # URL final após redirecionamento
-                    except requests.RequestException as e:
-                        raise RuntimeError(f"Erro ao processar URL Shopee: {e}")
-                else:
-                    final_url = url
+            shop_id, item_id = self._extract_ids_from_url(url)
 
-                    # Tenta extrair pelo padrão novo: /product/<shop_id>/<product_id>
-                    match = re.search(r'/product/(\d+)/(\d+)', final_url)
-                    if match:
-                        shop_id, item_id = match.groups()
-
-                    else:
-                        # Extrai padrão antigo: -i.<shop_id>.<product_id>
-                        match = re.search(r'-i\.(\d+)\.(\d+)', final_url)
-                        if match:
-                            shop_id, item_id = match.groups()
-
-                    if not (shop_id and item_id):
-                        raise ValueError(f"Não foi possível extrair shop_id e item_id da URL: {final_url}")
-
-            except (requests.HTTPError, requests.RequestException) as e:
-                raise RuntimeError(f"Erro ao processar URL Shopee: {e}")
+        if url and (shopId or itemId):
+            raise ValueError("Não é possível passar uma url com shopId ou itemId)")
             
-        # 🔹 Validação de parâmetros
+        # Validação de parâmetros obrigatórios
         if item_id and not shop_id:
-            raise ValueError("Para consultas de produtos individuais é preciso fornecer o 'shop_id' junto com o 'item_id'.")
+            raise ValueError("shop_id é obrigatório para consultas com item_id")
+        
+        if byShop and not shop_id:
+            raise ValueError("shop_id é obrigatório quando by_shop=True")
 
-        # 🔹 Conversões seguras
-        shop_id_str = f"shopId: {int(shop_id)}" if shop_id else ""
-        item_id_str = f", itemId: {int(item_id)}" if item_id else ""
-        limit_str = f", limit: {limit}" if not item_id else ""  # só aplica 'limit' em listagens
-        scroll_str = f', scrollId: "{scroll_id}"' if scroll_id else ""
+        # Construção dos argumentos da query
+        args = []
 
-        # 🔹 Campos do GraphQL centralizados (sem repetição)
+        if shop_id:
+            args.append(f"shopId: {int(shop_id)}")
+        
+        # Lógica para item_id vs listagem
+        if item_id and not byShop:
+            # Consulta de produto específico
+            args.append(f"itemId: {int(item_id)}")
+        else:
+            # Listagem (por loja ou geral) - permite paginação e limite
+            if limit:
+                args.append(f"limit: {limit}")
+            if page:
+                args.append(f"page: {page}")
+            if scrollId:
+                args.append(f'scrollId: "{scrollId}"')
+
+        # Parâmetros de busca/filtro (apenas para listagens)
+        if keyword and not byShop:  # Não permite keyword com by_shop
+            args.append(f"keyword: '{keyword}'")
+        
+        if productCatId:
+            args.append(f"productCatId: {productCatId}")
+        
+        if isAMSOffer is not None:
+            args.append(f"isAMSOffer: {str(isAMSOffer).lower()}")
+        
+        if isKeySeller is not None:
+            args.append(f"isKeySeller: {str(isKeySeller).lower()}")
+        
+        if shopType:
+            args.append(f"shopType: {shopType}")
+        
+        if sortType:
+            args.append(f"sortType: {sortType}")
+
+        # Campos fixos da resposta
         fields = """
             productName
             shopName
             shopId
             itemId
+            productCatIds
             offerLink
             productLink
             price
@@ -146,7 +200,6 @@ class ShopeeAffiliateSync(ShopeeAffiliateBase):
             periodEndTime
             priceMin
             priceMax
-            productCatIds
             ratingStar
             priceDiscountRate
             shopType
@@ -154,16 +207,18 @@ class ShopeeAffiliateSync(ShopeeAffiliateBase):
             shopeeCommissionRate
         """
 
-        # 🔹 Montagem dinâmica do query
+        # Montagem final da query
+        query_args = ", ".join(args)
         query = f"""
         {{
-            productOfferV2({shop_id_str}{item_id_str}{limit_str}{scroll_str}) {{
+            productOfferV2({query_args}) {{
                 nodes {{
                     {fields}
                 }}
             }}
         }}
         """
+
         return self.graphql_query(query)
     
     def get_short_url(self, url: str, sub_ids: list[str] | None = None) -> str:
@@ -283,9 +338,9 @@ class ShopeeAffiliateAsync(ShopeeAffiliateBase):
     def __init__(self, partner_id: str, partner_key: str):
         super().__init__(partner_id, partner_key)
     
-    async def graphql_query(self, query: str = None) -> Dict[str, Any]:
+    async def graphql_query_async(self, query: str) -> Dict[str, Any]:
         """
-        Executa uma consulta GraphQL de forma assíncrona
+        Executa uma consulta GraphQL de forma assíncrona.
         
         Args:
             query: String com a query GraphQL
@@ -294,11 +349,13 @@ class ShopeeAffiliateAsync(ShopeeAffiliateBase):
             Dict com a resposta da API
         """
         timestamp = int(time.time())
-        payload_str = json.dumps({"query": query}, separators=(",", ":")) if query else {}
-
+        payload = {"query": query}
+        payload_str = json.dumps(payload, separators=(",", ":"))
         headers = self._build_headers(timestamp, payload_str)
         
-        async with aiohttp.ClientSession() as session:
+        timeout = aiohttp.ClientTimeout(total=30)
+        
+        async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.post(
                 self.base_url,
                 headers=headers,
@@ -307,72 +364,140 @@ class ShopeeAffiliateAsync(ShopeeAffiliateBase):
                 response.raise_for_status()
                 return await response.json()
 
-    async def get_product_offer(
-        self,
-        url: str = None,
-        shop_id: Union[int, str, None] = None,
-        item_id: Union[int, str, None] = None,
-        limit: int = 5,
-        scroll_id: str | None = None,
-        pprint: bool = False
-        ) -> Dict[str, Any]:
-        """
-        Busca informações de oferta de produto específico.
-        
-        Args:
-            url: URL do produto Shopee (aceita link curto ou completo).
-            shop_id: ID da loja (int ou string).
-            item_id: ID do produto (int ou string).
-            limit: Total de itens por consulta.
-            scroll_id: ID da paginação (opcional).
-            pprint: Se for True, retorna a resposta em formato JSON formatado.
-            
-        Returns:
-            Dict com informações do produto.
-        """
-
-        # 🔹 Se uma URL for passada, tenta extrair shop_id e item_id dela
-        if url:
-            try:
-                # Verifica se é um link curto (s.shopee.com.br)
-                timeout = aiohttp.ClientTimeout(total=5)
+    async def _extract_ids_from_url_async(self, url: str) -> tuple[str, str]:
+        """Extrai shop_id e item_id de URLs da Shopee de forma assíncrona."""
+        try:
+            if "s.shopee.com.br" in url:  # Link curto
+                timeout = aiohttp.ClientTimeout(total=10)
                 async with aiohttp.ClientSession(timeout=timeout) as session:
                     async with session.get(url, allow_redirects=True) as response:
-                        final_url = str(response.url)
+                        final_url = str(response.url)  # URL final após redirecionamento
+            else:
+                final_url = url
 
-                # Extrai padrão novo: /product/<shop_id>/<product_id>
-                match = re.search(r'/product/(\d+)/(\d+)', final_url)
-                if match:
-                    shop_id, item_id = match.groups()
+            # Padrão novo: /product/<shop_id>/<product_id>
+            match = re.search(r'/product/(\d+)/(\d+)', final_url)
+            if match:
+                return match.groups()
 
-                else:
-                    # Extrai padrão antigo: -i.<shop_id>.<product_id>
-                    match = re.search(r'-i\.(\d+)\.(\d+)', final_url)
-                    if match:
-                        shop_id, item_id = match.groups()
+            # Padrão antigo: -i.<shop_id>.<product_id>
+            match = re.search(r'-i\.(\d+)\.(\d+)', final_url)
+            if match:
+                return match.groups()
 
-                if not (shop_id and item_id):
-                    raise ValueError(f"Não foi possível extrair shop_id e item_id da URL: {final_url}")
+            raise ValueError(f"Formato de URL não suportado: {url}")
 
-            except (aiohttp.ClientError, asyncio.TimeoutError) as e:
-                raise RuntimeError(f"Erro ao processar URL Shopee: {e}")
+        except aiohttp.ClientError as e:
+            raise RuntimeError(f"Erro ao processar URL: {e}")
 
-        # 🔹 Validação de parâmetros
+    async def get_product_offer_async(
+        self,
+        url: str = None,
+        byShop: bool = False,
+        shopId: Union[int, str, None] = None,
+        itemId: Union[int, str, None] = None,
+        keyword: str | None = None,
+        shopType: str | None = None,
+        page: int | None = None,
+        limit: int = 5,
+        sortType: str | None = None,
+        productCatId: int | None = None,
+        isAMSOffer: bool | None = None,
+        isKeySeller: bool | None = None,
+        scrollId: str | None = None
+    ) -> Dict[str, Any]:
+        """
+        Busca informações de oferta de produto específico de forma assíncrona.
+        
+        Args:
+            url: URL do produto Shopee (aceita link curto ou completo)
+            byShop: Filtrar apenas por loja
+            shopId: ID da loja
+            itemId: ID do produto
+            keyword: Termo de busca
+            shopType: Tipo de loja
+            page: Número da página
+            limit: Itens por página (default: 5)
+            sortType: Tipo de ordenação (1, 2, 3)
+            productCatId: ID da categoria
+            isAMSOffer: Filtro para ofertas AMS
+            isKeySeller: Filtro para vendedores chave
+            scrollId: ID para paginação
+
+        Returns:
+            Dict com informações do produto
+
+        Raises:
+            ValueError: Quando há parâmetros inválidos ou ausentes
+            RuntimeError: Erro ao processar URL
+        """
+        # Validações iniciais
+        if sortType and sortType not in (1, 2, 3):
+            raise ValueError("sortType deve ser 1, 2 ou 3")
+
+        # Inicializa variáveis
+        shop_id = shopId
+        item_id = itemId
+
+        # Extração de IDs da URL se fornecida
+        if url:
+            shop_id, item_id = await self._extract_ids_from_url_async(url)
+
+        if url and (shopId or itemId):
+            raise ValueError("Não é possível passar uma url com shopId ou itemId")
+                
+        # Validação de parâmetros obrigatórios
         if item_id and not shop_id:
-            raise ValueError("Para consultas de produtos individuais é preciso fornecer o 'shop_id' junto com o 'item_id'.")
+            raise ValueError("shop_id é obrigatório para consultas com item_id")
+        
+        if byShop and not shop_id:
+            raise ValueError("shop_id é obrigatório quando byShop=True")
 
-        # 🔹 Conversões seguras
-        shop_id_str = f"shopId: {int(shop_id)}" if shop_id else ""
-        item_id_str = f", itemId: {int(item_id)}" if item_id else ""
-        limit_str = f", limit: {limit}" if not item_id else ""  # só aplica 'limit' em listagens
-        scroll_str = f', scrollId: "{scroll_id}"' if scroll_id else ""
+        # Construção dos argumentos da query
+        args = []
 
-        # 🔹 Campos do GraphQL centralizados
+        if shop_id:
+            args.append(f"shopId: {int(shop_id)}")
+        
+        # Lógica para item_id vs listagem
+        if item_id and not byShop:
+            # Consulta de produto específico
+            args.append(f"itemId: {int(item_id)}")
+        else:
+            # Listagem (por loja ou geral) - permite paginação e limite
+            if limit:
+                args.append(f"limit: {limit}")
+            if page:
+                args.append(f"page: {page}")
+            if scrollId:
+                args.append(f'scrollId: "{scrollId}"')
+
+        # Parâmetros de busca/filtro (apenas para listagens)
+        if keyword and not byShop:  # Não permite keyword com byShop
+            args.append(f"keyword: '{keyword}'")
+        
+        if productCatId:
+            args.append(f"productCatId: {productCatId}")
+        
+        if isAMSOffer is not None:
+            args.append(f"isAMSOffer: {str(isAMSOffer).lower()}")
+        
+        if isKeySeller is not None:
+            args.append(f"isKeySeller: {str(isKeySeller).lower()}")
+        
+        if shopType:
+            args.append(f"shopType: {shopType}")
+        
+        if sortType:
+            args.append(f"sortType: {sortType}")
+
+        # Campos fixos da resposta
         fields = """
             productName
             shopName
             shopId
             itemId
+            productCatIds
             offerLink
             productLink
             price
@@ -384,7 +509,6 @@ class ShopeeAffiliateAsync(ShopeeAffiliateBase):
             periodEndTime
             priceMin
             priceMax
-            productCatIds
             ratingStar
             priceDiscountRate
             shopType
@@ -392,10 +516,11 @@ class ShopeeAffiliateAsync(ShopeeAffiliateBase):
             shopeeCommissionRate
         """
 
-        # 🔹 Montagem dinâmica do query
+        # Montagem final da query
+        query_args = ", ".join(args)
         query = f"""
         {{
-            productOfferV2({shop_id_str}{item_id_str}{limit_str}{scroll_str}) {{
+            productOfferV2({query_args}) {{
                 nodes {{
                     {fields}
                 }}
@@ -403,13 +528,7 @@ class ShopeeAffiliateAsync(ShopeeAffiliateBase):
         }}
         """
 
-        if pprint:
-            # 🔹 Chama a função de consulta GraphQL 
-            resultado = await self.graphql_query(query)
-            return json.dumps(resultado, indent=2, ensure_ascii=False)
-
-        # 🔹 Chama a função de consulta GraphQL
-        return await self.graphql_query(query)
+        return await self.graphql_query_async(query)
         
     async def get_short_url(self, url: str, sub_ids: list[str] | None = None) -> str:
         """
