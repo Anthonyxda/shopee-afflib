@@ -106,7 +106,7 @@ class ShopeeAffiliateSync(ShopeeAffiliateBase):
         
         Args:
             url: URL do produto Shopee (aceita link curto ou completo)
-            by_shop: Filtrar apenas por loja
+            byShop: Filtrar apenas por loja
             shopId: ID da loja
             itemId: ID do produto
             keyword: Termo de busca
@@ -131,31 +131,40 @@ class ShopeeAffiliateSync(ShopeeAffiliateBase):
             raise ValueError("sortType deve ser 1, 2 ou 3")
 
         # Inicializa as variáveis shop_id e item_id
-        shop_id = shopId if shopId else None
-        item_id = itemId if itemId else None
+        shop_id = shopId
+        item_id = itemId
 
         # Extração de IDs da URL se fornecida
         if url:
-            shop_id, item_id = self._extract_ids_from_url(url)
-
-        if url and (shopId or itemId):
-            raise ValueError("Não é possível passar uma url com shopId ou itemId)")
+            extracted_shop_id, extracted_item_id = self._extract_ids_from_url(url)
             
+            # Se byShop=True, usa apenas o shop_id da URL
+            if byShop:
+                shop_id = extracted_shop_id
+                item_id = None  # Ignora item_id quando é listagem por loja
+            else:
+                shop_id = extracted_shop_id
+                item_id = extracted_item_id
+
+        # Validação de conflito: não permite URL com shopId/itemId explícitos
+        if url and ((shopId is not None) or (itemId is not None)):
+            raise ValueError("Não é possível passar uma URL junto com shopId ou itemId explícitos")
+                
         # Validação de parâmetros obrigatórios
-        if itemId and not shopId:
+        if item_id and not shop_id:
             raise ValueError("shop_id é obrigatório para consultas com item_id")
         
-        if byShop and not shopId:
-            raise ValueError("shop_id é obrigatório quando by_shop=True")
+        if byShop and not shop_id:
+            raise ValueError("shop_id é obrigatório quando byShop=True")
 
         # Construção dos argumentos da query
         args = []
 
-        if shopId:
+        if shop_id:
             args.append(f"shopId: {int(shop_id)}")
         
         # Lógica para item_id vs listagem
-        if itemId and not byShop:
+        if item_id and not byShop:
             # Consulta de produto específico
             args.append(f"itemId: {int(item_id)}")
         else:
@@ -168,7 +177,7 @@ class ShopeeAffiliateSync(ShopeeAffiliateBase):
                 args.append(f'scrollId: "{scrollId}"')
 
         # Parâmetros de busca/filtro (apenas para listagens)
-        if keyword and not byShop:  # Não permite keyword com by_shop
+        if keyword and not byShop:  # Não permite keyword com byShop
             args.append(f'keyword: "{keyword}"')
         
         if productCatId:
@@ -181,7 +190,7 @@ class ShopeeAffiliateSync(ShopeeAffiliateBase):
             args.append(f"isKeySeller: {str(isKeySeller).lower()}")
         
         if shopType:
-            args.append(f"shopType: {shopType}")
+            args.append(f'shopType: "{shopType}"')
         
         if sortType:
             args.append(f"sortType: {sortType}")
@@ -394,7 +403,7 @@ class ShopeeAffiliateAsync(ShopeeAffiliateBase):
         except aiohttp.ClientError as e:
             raise RuntimeError(f"Erro ao processar URL: {e}")
 
-    async def get_product_offer_async(
+    async def get_product_offer(
         self,
         url: str = None,
         byShop: bool = False,
@@ -411,7 +420,7 @@ class ShopeeAffiliateAsync(ShopeeAffiliateBase):
         scrollId: str | None = None
     ) -> Dict[str, Any]:
         """
-        Busca informações de oferta de produto específico de forma assíncrona.
+        Busca informações de oferta de produto específico.
         
         Args:
             url: URL do produto Shopee (aceita link curto ou completo)
@@ -440,31 +449,40 @@ class ShopeeAffiliateAsync(ShopeeAffiliateBase):
             raise ValueError("sortType deve ser 1, 2 ou 3")
 
         # Inicializa as variáveis shop_id e item_id
-        shop_id = shopId if shopId else None
-        item_id = itemId if itemId else None
+        shop_id = shopId
+        item_id = itemId
 
         # Extração de IDs da URL se fornecida
         if url:
-            shop_id, item_id = await self._extract_ids_from_url_async(url)
-    
-        if url and (shopId or itemId):
-            raise ValueError("Não é possível passar uma url com shopId ou itemId")
+            extracted_shop_id, extracted_item_id = await self._extract_ids_from_url_async(url)
+            
+            # Se byShop=True, usa apenas o shop_id da URL
+            if byShop:
+                shop_id = extracted_shop_id
+                item_id = None  # Ignora item_id quando é listagem por loja
+            else:
+                shop_id = extracted_shop_id
+                item_id = extracted_item_id
+
+        # Validação de conflito: não permite URL com shopId/itemId explícitos
+        if url and ((shopId is not None) or (itemId is not None)):
+            raise ValueError("Não é possível passar uma URL junto com shopId ou itemId explícitos")
                 
         # Validação de parâmetros obrigatórios
-        if itemId and not shopId:
+        if item_id and not shop_id:
             raise ValueError("shop_id é obrigatório para consultas com item_id")
         
-        if byShop and not shopId:
+        if byShop and not shop_id:
             raise ValueError("shop_id é obrigatório quando byShop=True")
 
         # Construção dos argumentos da query
         args = []
 
-        if shopId:
+        if shop_id:
             args.append(f"shopId: {int(shop_id)}")
         
         # Lógica para item_id vs listagem
-        if itemId and not byShop:
+        if item_id and not byShop:
             # Consulta de produto específico
             args.append(f"itemId: {int(item_id)}")
         else:
@@ -490,7 +508,7 @@ class ShopeeAffiliateAsync(ShopeeAffiliateBase):
             args.append(f"isKeySeller: {str(isKeySeller).lower()}")
         
         if shopType:
-            args.append(f"shopType: {shopType}")
+            args.append(f'shopType: "{shopType}"')
         
         if sortType:
             args.append(f"sortType: {sortType}")
