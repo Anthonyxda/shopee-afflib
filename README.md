@@ -84,7 +84,7 @@ new_image.show()
 - 🧠 Versões síncrona e assíncrona
 
 ## 🔥 Novidades
-v.1.0.11 - Pequenas correções no código
+v.1.0.11 / v1.0.12 - Pequenas correções no código
 
 v.1.0.10
 - Adicionado mais argumentos para busca de seletiva de itens
