@@ -130,11 +130,13 @@ class ShopeeAffiliateSync(ShopeeAffiliateBase):
         if sortType and sortType not in (1, 2, 3):
             raise ValueError("sortType deve ser 1, 2 ou 3")
 
+        # Inicializa as variáveis shop_id e item_id
+        shop_id = shopId if shopId else None
+        item_id = itemId if itemId else None
+
         # Extração de IDs da URL se fornecida
         if url:
             shop_id, item_id = self._extract_ids_from_url(url)
-            shopId = shop_id
-            itemId = item_id
 
         if url and (shopId or itemId):
             raise ValueError("Não é possível passar uma url com shopId ou itemId)")
@@ -150,12 +152,12 @@ class ShopeeAffiliateSync(ShopeeAffiliateBase):
         args = []
 
         if shopId:
-            args.append(f"shopId: {int(shopId)}")
+            args.append(f"shopId: {int(shop_id)}")
         
         # Lógica para item_id vs listagem
         if itemId and not byShop:
             # Consulta de produto específico
-            args.append(f"itemId: {int(itemId)}")
+            args.append(f"itemId: {int(item_id)}")
         else:
             # Listagem (por loja ou geral) - permite paginação e limite
             if limit:
@@ -437,12 +439,14 @@ class ShopeeAffiliateAsync(ShopeeAffiliateBase):
         if sortType and sortType not in (1, 2, 3):
             raise ValueError("sortType deve ser 1, 2 ou 3")
 
+        # Inicializa as variáveis shop_id e item_id
+        shop_id = shopId if shopId else None
+        item_id = itemId if itemId else None
+
         # Extração de IDs da URL se fornecida
         if url:
             shop_id, item_id = await self._extract_ids_from_url_async(url)
-            shopId = shop_id
-            itemId = item_id
-
+    
         if url and (shopId or itemId):
             raise ValueError("Não é possível passar uma url com shopId ou itemId")
                 
@@ -457,12 +461,12 @@ class ShopeeAffiliateAsync(ShopeeAffiliateBase):
         args = []
 
         if shopId:
-            args.append(f"shopId: {int(shopId)}")
+            args.append(f"shopId: {int(shop_id)}")
         
         # Lógica para item_id vs listagem
         if itemId and not byShop:
             # Consulta de produto específico
-            args.append(f"itemId: {int(itemId)}")
+            args.append(f"itemId: {int(item_id)}")
         else:
             # Listagem (por loja ou geral) - permite paginação e limite
             if limit:
