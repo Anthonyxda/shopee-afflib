@@ -84,18 +84,21 @@ new_image.show()
 - 🧠 Versões síncrona e assíncrona
 
 ## 🔥 Novidades
-v.1.0.1^ - Pequenas correções no código
+v.1.0.1^ 
+- Pequenas correções no código.
+- Novo padrão de URL agora é suportado. (Total de 3)
+- Corrigido o bug de URL não suportada para alguns links.
 
 v.1.0.10
-- Adicionado mais argumentos para busca de seletiva de itens
+- Adicionado mais argumentos para busca de seletiva de itens.
 - Vaárias melhorias no código.
 
 v.1.0.5
-- Adiconado a possibidade de pesquisar produtos de uma loja pela URL
-- Pequenas correções de bugs
+- Adiconado a possibidade de pesquisar produtos de uma loja pela URL.
+- Pequenas correções de bugs.
 
 v.1.0.0
-- Versão inicial
+- Versão inicial.
 
 ## Para ver as categorias dos itens 
 👉 https://seller.shopee.com.br/edu/category-guide

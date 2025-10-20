@@ -10,6 +10,7 @@ from typing import Optional, Dict, Any, Union, BinaryIO
 from io import BytesIO
 import re
 
+"Final URL: https://shopee.com.br/opaanlp/1502844408/18398348564?__mobile__=1&gads_t_sig=VTJGc2RHVmtYMTlxTFVSVVRrdENkWHlFU0hvQlZFVENpb1FnT09uNDlDSk1idENvR0tMb1ArWmNDeU05WWpLSXJMaWpMTmZEL2R5eHBDOTBLVzVUcGU2dnNtWWdHdEFoaDBQSmptR2M3R0d4V3RwdEF4NTV2ZFZNeGlQeHhtUk1meElrTkRWWGM5Q1ZZUmIydjJDUEdPVFNVOTcvOTh0dWJNd1hHV3FQZG9VPQ&uls_trackid=53vu7f4c00r7&utm_campaign=id_104FU6RmxlW&utm_content=----&utm_medium=affiliates&utm_source=an_18303140212&utm_term=du2orya3kri3"
 class ShopeeAffiliateBase:
     """Classe base com funcionalidades comuns"""
     
@@ -70,17 +71,22 @@ class ShopeeAffiliateSync(ShopeeAffiliateBase):
             else:
                 final_url = url
 
-            # Padrão novo: /product/<shop_id>/<product_id>
+            # Padrão 1: /product/<shop_id>/<product_id>
             match = re.search(r'/product/(\d+)/(\d+)', str(final_url))
             if match:
                 return match.groups()
 
-            # Padrão antigo: -i.<shop_id>.<product_id>
+            # Padrão 2: -i.<shop_id>.<product_id>
             match = re.search(r'-i\.(\d+)\.(\d+)', str(final_url))
             if match:
                 return match.groups()
 
-            raise ValueError(f"Está ULR é muito antiga ou o formato não é suportado: {url}")
+            # NOVO PADRÃO: /<shop_id>/<product_id> (formato direto)
+            match = re.search(r'/(\d+)/(\d+)(?=\?|$)', str(final_url))
+            if match:
+                return match.groups()
+
+            raise ValueError(f"Esta URL é muito antiga ou o formato não é suportado: {url}")
 
         except requests.RequestException as e:
             raise RuntimeError(f"Erro ao processar URL: {e}")
@@ -395,6 +401,10 @@ class ShopeeAffiliateAsync(ShopeeAffiliateBase):
 
             # Padrão antigo: -i.<shop_id>.<product_id>
             match = re.search(r'-i\.(\d+)\.(\d+)', final_url)
+            if match:
+                return match.groups()
+            # NOVO PADRÃO: /<shop_id>/<product_id> (formato direto)
+            match = re.search(r'/(\d+)/(\d+)(?=\?|$)', str(final_url))
             if match:
                 return match.groups()
 
