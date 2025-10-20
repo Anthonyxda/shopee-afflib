@@ -84,7 +84,12 @@ new_image.show()
 - 🧠 Versões síncrona e assíncrona
 
 ## 🔥 Novidades
-v.1.0.1^ 
+v.1.0.20
+- Várias melhorias no código.
+- Nova função adicionada - `get_item_details`
+- Função `get_short_url` renomeada para `generate_short_url`
+
+v.1.0.15
 - Pequenas correções no código.
 - Novo padrão de URL agora é suportado. (Total de 3)
 - Corrigido o bug de URL não suportada para alguns links.

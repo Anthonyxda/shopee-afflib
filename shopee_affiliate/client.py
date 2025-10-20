@@ -6,11 +6,11 @@ import requests
 import aiohttp
 import asyncio
 import os
-from typing import Optional, Dict, Any, Union, BinaryIO
+from typing import Optional, Dict, Any, Union
 from io import BytesIO
 import re
+from shopee_affiliate._typing import details_fields as FIELDS, ofert_fields as fields
 
-"Final URL: https://shopee.com.br/opaanlp/1502844408/18398348564?__mobile__=1&gads_t_sig=VTJGc2RHVmtYMTlxTFVSVVRrdENkWHlFU0hvQlZFVENpb1FnT09uNDlDSk1idENvR0tMb1ArWmNDeU05WWpLSXJMaWpMTmZEL2R5eHBDOTBLVzVUcGU2dnNtWWdHdEFoaDBQSmptR2M3R0d4V3RwdEF4NTV2ZFZNeGlQeHhtUk1meElrTkRWWGM5Q1ZZUmIydjJDUEdPVFNVOTcvOTh0dWJNd1hHV3FQZG9VPQ&uls_trackid=53vu7f4c00r7&utm_campaign=id_104FU6RmxlW&utm_content=----&utm_medium=affiliates&utm_source=an_18303140212&utm_term=du2orya3kri3"
 class ShopeeAffiliateBase:
     """Classe base com funcionalidades comuns"""
     
@@ -201,30 +201,8 @@ class ShopeeAffiliateSync(ShopeeAffiliateBase):
         if sortType:
             args.append(f"sortType: {sortType}")
 
-        # Campos fixos da resposta
-        fields = """
-            productName
-            shopName
-            shopId
-            itemId
-            productCatIds
-            offerLink
-            productLink
-            price
-            commissionRate
-            commission
-            sales
-            imageUrl
-            periodStartTime
-            periodEndTime
-            priceMin
-            priceMax
-            ratingStar
-            priceDiscountRate
-            shopType
-            sellerCommissionRate
-            shopeeCommissionRate
-        """
+        # Campos fixos da resposta vem da _importação
+        #fields = ofert_fields
 
         # Montagem final da query
         query_args = ", ".join(args)
@@ -240,16 +218,50 @@ class ShopeeAffiliateSync(ShopeeAffiliateBase):
 
         return self.graphql_query(query)
     
-    def get_short_url(self, url: str, sub_ids: list[str] | None = None) -> str:
+    def get_item_details(self, data: dict, item_index: int = 0, exclude_list: FIELDS|list[str]|str|None = None) -> Dict[str, Any]:
         """
-        Gera um link curto da Shopee via API de Afiliados.
+        Extrai detalhes específicos de um item a partir dos dados do produto.
+
+        Args:
+            data: Dicionário com os dados do produto retornado da API.
+            item_index: Índice do item na lista 'nodes' (default: 0).
+            exclude_list: Lista opcional de campos a serem excluídos.
+
+        Returns:
+            Dicionário com detalhes do item (item_id, shop_id, product_name, price, image_url).
+        """
+        try:
+            # Método 2: Usando list comprehension (mais flexível)
+            lista_fields = [linha.strip() for linha in fields.split('\n') if linha.strip()]
+            # Se o exclude list for uma string apenas
+            if isinstance(exclude_list, str):
+                exclude_list = [exclude_list]
+            if exclude_list:
+                lista_fields = [field for field in lista_fields if field not in exclude_list]
+            nodes = data.get("data", {}).get("productOfferV2", {}).get("nodes", [])
+            if not nodes:
+                raise ValueError("Nenhum dado de produto encontrado.")
+
+            node = nodes[item_index]  # Pega o item pelo índice, padrão 0
+            item_details = {}
+            for item_field in lista_fields:
+
+                item_details[item_field] = node.get(item_field)
+            return item_details
+
+        except Exception as e:
+            raise RuntimeError(f"Erro ao extrair detalhes do item: {e}")
+        
+    def generate_short_url(self, url: str, sub_ids: list[str] | None = None) -> str:
+        """
+        Gera seu link curto da Shopee via API de Afiliados.
 
         Args:
             url: URL original do produto Shopee.
             sub_ids: Lista opcional de sub-IDs (ex: ["s1", "s2", "s3"]).
 
         Returns:
-            O link curto (string).
+            O seu link curto de afiliado (string).
         """
         # 🔹 Garante que a URL é válida
         if not url.startswith("http"):
@@ -523,30 +535,8 @@ class ShopeeAffiliateAsync(ShopeeAffiliateBase):
         if sortType:
             args.append(f"sortType: {sortType}")
 
-        # Campos fixos da resposta
-        fields = """
-            productName
-            shopName
-            shopId
-            itemId
-            productCatIds
-            offerLink
-            productLink
-            price
-            commissionRate
-            commission
-            sales
-            imageUrl
-            periodStartTime
-            periodEndTime
-            priceMin
-            priceMax
-            ratingStar
-            priceDiscountRate
-            shopType
-            sellerCommissionRate
-            shopeeCommissionRate
-        """
+        # Campos fixos da resposta vem da _importação
+        #fields = ofert_fields
 
         # Montagem final da query
         query_args = ", ".join(args)
@@ -561,17 +551,50 @@ class ShopeeAffiliateAsync(ShopeeAffiliateBase):
         """
 
         return await self.graphql_query_async(query)
-        
-    async def get_short_url(self, url: str, sub_ids: list[str] | None = None) -> str:
+    
+    async def get_item_details(self, data: dict, item_index: int = 0, exclude_list: FIELDS|list[str]|str|None = None) -> Dict[str, Any]:
         """
-        Gera um link curto da Shopee via API de Afiliados.
+        Extrai detalhes específicos de um item a partir dos dados do produto.
+
+        Args:
+            data: Dicionário com os dados do produto retornado da API.
+            item_index: Índice do item na lista 'nodes' (default: 0).
+            exclude_list: Lista opcional de campos a serem excluídos.
+
+        Returns:
+            Dicionário com detalhes do item (item_id, shop_id, product_name, price, image_url).
+        """
+        try:
+            # Método 2: Usando list comprehension (mais flexível)
+            lista_fields = [linha.strip() for linha in fields.split('\n') if linha.strip()]
+            # Se o exclude list for uma string apenas
+            if isinstance(exclude_list, str):
+                exclude_list = [exclude_list]
+            if exclude_list:
+                lista_fields = [field for field in lista_fields if field not in exclude_list]
+            nodes = data.get("data", {}).get("productOfferV2", {}).get("nodes", [])
+            if not nodes:
+                raise ValueError("Nenhum dado de produto encontrado.")
+
+            node = nodes[item_index]  # Pega o item pelo índice, padrão 0
+            item_details = {}
+            for item_field in lista_fields:
+
+                item_details[item_field] = node.get(item_field)
+            return item_details
+
+        except Exception as e:
+            raise RuntimeError(f"Erro ao extrair detalhes do item: {e}")
+    async def generate_short_url(self, url: str, sub_ids: list[str] | None = None) -> str:
+        """
+        Gera seu link curto da Shopee via API de Afiliados.
 
         Args:
             url: URL original do produto Shopee.
             sub_ids: Lista opcional de sub-IDs (ex: ["s1", "s2", "s3"]).
 
         Returns:
-            O link curto (string).
+            O seu link curto de afiliado (string).
         """
         # 🔹 Garante que a URL é válida
         if not url.startswith("http"):
@@ -688,4 +711,3 @@ def create_sync_client(partner_id: str, partner_key: str) -> ShopeeAffiliateSync
 def create_async_client(partner_id: str, partner_key: str) -> ShopeeAffiliateAsync:
     """Cria um cliente assíncrono"""
     return ShopeeAffiliateAsync(partner_id, partner_key)
-
