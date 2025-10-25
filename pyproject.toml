@@ -1,6 +1,6 @@
 [project]
 name = "shopee-afflib"
-version = "1.0.26"
+version = "1.0.27"
 description = "Biblioteca para integração com a API de Afiliados da Shopee (síncrona e assíncrona)."
 readme = "README.md"
 requires-python = ">=3.8"

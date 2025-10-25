@@ -304,6 +304,10 @@ class ShopeeAffiliateSync(ShopeeAffiliateBase):
         try:
             # Método 2: Usando list comprehension (mais flexível)
             lista_fields = [linha.strip() for linha in fields.split('\n') if linha.strip()]
+            lista_fields.append('originalPrice')
+            lista_fields.append('originalPriceMin')
+            lista_fields.append('originalPriceMax')
+            
             if field and exclude_list:
                 raise ValueError("Não é possível usar 'field' e 'exclude_list' ao mesmo tempo.")
             # Se o exclude list for uma string apenas
@@ -713,6 +717,10 @@ class ShopeeAffiliateAsync(ShopeeAffiliateBase):
         try:
             # Método 2: Usando list comprehension (mais flexível)
             lista_fields = [linha.strip() for linha in fields.split('\n') if linha.strip()]
+            lista_fields.append('originalPrice')
+            lista_fields.append('originalPriceMin')
+            lista_fields.append('originalPriceMax')
+
             if field and exclude_list:
                 raise ValueError("Não é possível usar 'field' e 'exclude_list' ao mesmo tempo.")
             # Se o exclude list for uma string apenas
