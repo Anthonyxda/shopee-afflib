@@ -84,6 +84,10 @@ new_image.show()
 - 🧠 Versões síncrona e assíncrona
 
 ## 🔥 Novidades
+
+v.1.0.25
+- Adicionados novos campos no json (pós-processamento)
+
 v.1.0.20
 - Várias melhorias no código.
 - Nova função adicionada - `get_item_details`

@@ -10,6 +10,8 @@ from typing import Optional, Dict, Any, Union
 from io import BytesIO
 import re
 from shopee_affiliate._typing import details_fields as FIELDS, ofert_fields as fields
+import locale
+import copy
 
 class ShopeeAffiliateBase:
     """Classe base com funcionalidades comuns"""
@@ -90,6 +92,75 @@ class ShopeeAffiliateSync(ShopeeAffiliateBase):
 
         except requests.RequestException as e:
             raise RuntimeError(f"Erro ao processar URL: {e}")
+        
+    def get_locale(self, data: Dict[str, Any], local: str = None) -> dict:
+        """
+        Formata os preços para o formato BRL (R$ X.XXX,XX) e adiciona 'originalPrice',
+        'originalPriceMin' e 'originalPriceMax' logo após seus respectivos campos.
+        """
+        if local is None:
+            local = "pt_BR.UTF-8"
+            # Define o locale para português do Brasil
+            locale.setlocale(locale.LC_ALL, local)
+        else:
+            try:
+                locale.setlocale(locale.LC_ALL, local)
+            except ValueError:
+                locale.setlocale(locale.LC_ALL, " ") # Usa o locale padrão do sistema
+
+        formatted_data = copy.deepcopy(data)
+
+        def to_float_safe(v):
+            try:
+                return float(v)
+            except (TypeError, ValueError):
+                return 0.0
+
+        def preco_original(price: float, discount: int) -> float:
+            """Calcula o preço original antes do desconto."""
+            if not discount or discount <= 0 or discount >= 100:
+                return round(price, 2)
+            preco_orig = price / (1 - discount / 100)
+            return round(preco_orig, 2)
+
+        # Caminho até os produtos
+        produtos = (
+            formatted_data
+            .get("data", {})
+            .get("productOfferV2", {})
+            .get("nodes", [])
+        )
+
+        for produto in produtos:
+            preco = to_float_safe(produto.get("price"))
+            desconto = to_float_safe(produto.get("priceDiscountRate"))
+
+            # Calcula preços originais
+            produto["originalPrice"] = preco_original(preco, desconto)
+            produto["originalPriceMin"] = preco_original(to_float_safe(produto.get("priceMin")), desconto)
+            produto["originalPriceMax"] = preco_original(to_float_safe(produto.get("priceMax")), desconto)
+
+            # Formata todos os campos em BRL
+            for field in ["price", "priceMin", "priceMax", "commission",
+                        "originalPrice", "originalPriceMin", "originalPriceMax"]:
+                valor = to_float_safe(produto.get(field))
+                produto[field] = locale.currency(valor, symbol=True, grouping=True)
+
+            # Reorganiza as chaves do produto
+            ordered_produto = {}
+            for key, value in produto.items():
+                ordered_produto[key] = value
+                if key == "price":
+                    ordered_produto["originalPrice"] = produto["originalPrice"]
+                elif key == "priceMin":
+                    ordered_produto["originalPriceMin"] = produto["originalPriceMin"]
+                elif key == "priceMax":
+                    ordered_produto["originalPriceMax"] = produto["originalPriceMax"]
+
+            produto.clear()
+            produto.update(ordered_produto)
+
+        return formatted_data
 
     def get_product_offer(
         self,
@@ -216,9 +287,19 @@ class ShopeeAffiliateSync(ShopeeAffiliateBase):
         }}
         """
 
-        return self.graphql_query(query)
-    
-    def get_item_details(self, data: dict, item_index: int = 0, exclude_list: FIELDS|list[str]|str|None = None) -> Dict[str, Any]:
+        def get_field(self, field: FIELDS, query = query) -> Dict[str, Any]:
+            fields_response =  self.graphql_query(query)
+            data = fields_response.get("data", {})
+            nodes = data.get("productOfferV2", {}).get("nodes", [])
+            for node in nodes:
+                if field in node:
+                    return node[field]
+            return None
+            
+        response = self.graphql_query(query)
+        return self.get_locale(response)
+
+    def get_item_details(self, data: dict, item_index: int = 0, field: FIELDS|list[str]|str|None = None, exclude_list: FIELDS|list[str]|str|None = None) -> Dict[str, Any]:
         """
         Extrai detalhes específicos de um item a partir dos dados do produto.
 
@@ -233,11 +314,15 @@ class ShopeeAffiliateSync(ShopeeAffiliateBase):
         try:
             # Método 2: Usando list comprehension (mais flexível)
             lista_fields = [linha.strip() for linha in fields.split('\n') if linha.strip()]
+            if field and exclude_list:
+                raise ValueError("Não é possível usar 'field' e 'exclude_list' ao mesmo tempo.")
             # Se o exclude list for uma string apenas
             if isinstance(exclude_list, str):
                 exclude_list = [exclude_list]
             if exclude_list:
                 lista_fields = [field for field in lista_fields if field not in exclude_list]
+            if field:
+                lista_fields = [field]
             nodes = data.get("data", {}).get("productOfferV2", {}).get("nodes", [])
             if not nodes:
                 raise ValueError("Nenhum dado de produto encontrado.")
@@ -425,6 +510,75 @@ class ShopeeAffiliateAsync(ShopeeAffiliateBase):
         except aiohttp.ClientError as e:
             raise RuntimeError(f"Erro ao processar URL: {e}")
 
+    async def get_locale(self, data: Dict[str, Any], local: str = None) -> dict:
+        """
+        Formata os preços para o formato BRL (R$ X.XXX,XX) e adiciona 'originalPrice',
+        'originalPriceMin' e 'originalPriceMax' logo após seus respectivos campos.
+        """
+        if local is None:
+            local = "pt_BR.UTF-8"
+            # Define o locale para português do Brasil
+            locale.setlocale(locale.LC_ALL, local)
+        else:
+            try:
+                locale.setlocale(locale.LC_ALL, local)
+            except ValueError:
+                locale.setlocale(locale.LC_ALL, " ") # Usa o locale padrão do sistema
+
+        formatted_data = copy.deepcopy(data)
+
+        def to_float_safe(v):
+            try:
+                return float(v)
+            except (TypeError, ValueError):
+                return 0.0
+
+        def preco_original(price: float, discount: int) -> float:
+            """Calcula o preço original antes do desconto."""
+            if not discount or discount <= 0 or discount >= 100:
+                return round(price, 2)
+            preco_orig = price / (1 - discount / 100)
+            return round(preco_orig, 2)
+
+        # Caminho até os produtos
+        produtos = (
+            formatted_data
+            .get("data", {})
+            .get("productOfferV2", {})
+            .get("nodes", [])
+        )
+
+        for produto in produtos:
+            preco = to_float_safe(produto.get("price"))
+            desconto = to_float_safe(produto.get("priceDiscountRate"))
+
+            # Calcula preços originais
+            produto["originalPrice"] = preco_original(preco, desconto)
+            produto["originalPriceMin"] = preco_original(to_float_safe(produto.get("priceMin")), desconto)
+            produto["originalPriceMax"] = preco_original(to_float_safe(produto.get("priceMax")), desconto)
+
+            # Formata todos os campos em BRL
+            for field in ["price", "priceMin", "priceMax", "commission",
+                        "originalPrice", "originalPriceMin", "originalPriceMax"]:
+                valor = to_float_safe(produto.get(field))
+                produto[field] = locale.currency(valor, symbol=True, grouping=True)
+
+            # Reorganiza as chaves do produto
+            ordered_produto = {}
+            for key, value in produto.items():
+                ordered_produto[key] = value
+                if key == "price":
+                    ordered_produto["originalPrice"] = produto["originalPrice"]
+                elif key == "priceMin":
+                    ordered_produto["originalPriceMin"] = produto["originalPriceMin"]
+                elif key == "priceMax":
+                    ordered_produto["originalPriceMax"] = produto["originalPriceMax"]
+
+            produto.clear()
+            produto.update(ordered_produto)
+
+        return formatted_data
+    
     async def get_product_offer(
         self,
         url: str = None,
@@ -549,10 +703,10 @@ class ShopeeAffiliateAsync(ShopeeAffiliateBase):
             }}
         }}
         """
-
-        return await self.graphql_query_async(query)
-    
-    async def get_item_details(self, data: dict, item_index: int = 0, exclude_list: FIELDS|list[str]|str|None = None) -> Dict[str, Any]:
+        response = await self.graphql_query_async(query)
+        return await self.get_locale(response)
+        
+    async def get_item_details(self, data: dict, item_index: int = 0, field: FIELDS|list[str]|str|None = None, exclude_list: FIELDS|list[str]|str|None = None) -> Dict[str, Any]:
         """
         Extrai detalhes específicos de um item a partir dos dados do produto.
 
@@ -567,11 +721,15 @@ class ShopeeAffiliateAsync(ShopeeAffiliateBase):
         try:
             # Método 2: Usando list comprehension (mais flexível)
             lista_fields = [linha.strip() for linha in fields.split('\n') if linha.strip()]
+            if field and exclude_list:
+                raise ValueError("Não é possível usar 'field' e 'exclude_list' ao mesmo tempo.")
             # Se o exclude list for uma string apenas
             if isinstance(exclude_list, str):
                 exclude_list = [exclude_list]
             if exclude_list:
                 lista_fields = [field for field in lista_fields if field not in exclude_list]
+            if field:
+                lista_fields = [field]
             nodes = data.get("data", {}).get("productOfferV2", {}).get("nodes", [])
             if not nodes:
                 raise ValueError("Nenhum dado de produto encontrado.")
