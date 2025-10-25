@@ -273,7 +273,6 @@ class ShopeeAffiliateSync(ShopeeAffiliateBase):
             args.append(f"sortType: {sortType}")
 
         # Campos fixos da resposta vem da _importação
-        #fields = ofert_fields
 
         # Montagem final da query
         query_args = ", ".join(args)
@@ -286,15 +285,6 @@ class ShopeeAffiliateSync(ShopeeAffiliateBase):
             }}
         }}
         """
-
-        def get_field(self, field: FIELDS, query = query) -> Dict[str, Any]:
-            fields_response =  self.graphql_query(query)
-            data = fields_response.get("data", {})
-            nodes = data.get("productOfferV2", {}).get("nodes", [])
-            for node in nodes:
-                if field in node:
-                    return node[field]
-            return None
             
         response = self.graphql_query(query)
         return self.get_locale(response)
@@ -332,6 +322,8 @@ class ShopeeAffiliateSync(ShopeeAffiliateBase):
             for item_field in lista_fields:
 
                 item_details[item_field] = node.get(item_field)
+            if len(lista_fields) == 1:
+                return item_details[lista_fields[0]]
             return item_details
 
         except Exception as e:

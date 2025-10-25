@@ -85,8 +85,9 @@ new_image.show()
 
 ## 🔥 Novidades
 
-v.1.0.25
+v.1.0.25^
 - Adicionados novos campos no json (pós-processamento)
+- Pequenos bugs corrigidos.
 
 v.1.0.20
 - Várias melhorias no código.
